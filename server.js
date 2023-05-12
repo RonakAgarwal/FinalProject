@@ -69,9 +69,20 @@ app.get("/", (request, response) => {
   response.render("templates/index");
 });
 
-app.get("/apply", (request, response) => {
-  response.render("templates/apply");
+app.get("/invest", (request, response) => {
+  response.render("templates/invest");
 });
+
+app.get("/portfolio", (request, response) => {
+  response.render("templates/portfolio");
+});
+
+app.get("/stocks", (request, response) => {
+  response.render("templates/stocks");
+});
+
+
+// ------------- OLD CODE -----------
 
 app.post("/processApplication", async (request, response) => {
   const { name, email, gpa, backgroundInformation } = request.body;
@@ -79,15 +90,13 @@ app.post("/processApplication", async (request, response) => {
   response.render("templates/processApplication", { name, email, gpa, backgroundInformation });
 });
 
-app.get("/reviewApplication", (request, response) => {
-  response.render("templates/reviewApplication");
-});
-
 app.post("/processReviewApplication", async (request, response) => {
   const { email } = request.body;
   const applications = await findApplicationsByEmail(email);
   response.render("templates/processReviewApplication", { applications });
 });
+
+// ----------- OLD CODE -----------
 
 app.listen(4000, () => {
   console.log("Server started on port 4000");
