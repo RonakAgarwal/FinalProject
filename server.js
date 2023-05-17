@@ -141,6 +141,25 @@ app.get("/portfolio", (request, response) => {
   response.render("templates/portfolio");
 });
 
+/* app.post("/processPortfolio", async (request, response) => {
+  const { acc } = request.body;
+  const portfolio_data = await getPortfolioByName(acc);
+
+  if (!portfolio_data) {
+    const error_message = "Error: Portfolio not found";
+    return response.send(`
+      <script>alert("${error_message}"); window.location.href = "/portfolio";</script>
+    `);
+  }  
+
+  response.render("templates/processPortfolio", {
+    name: portfolio_data.name,
+    holdings: portfolio_data.holdings,
+  });
+});
+
+*/
+
 app.post("/processPortfolio", async (request, response) => {
   const { acc } = request.body;
   const portfolio_data = await getPortfolioByName(acc);
@@ -152,9 +171,64 @@ app.post("/processPortfolio", async (request, response) => {
     `);
   }
 
+  const holdings = portfolio_data.holdings;
+
+  // Calculate total holdings value
+  let total_holdings = 0;
+
+  for (const holding of holdings) {
+    const { ticker, amount } = holding;
+
+    // Get current date
+    const currentDate = new Date();
+    const year = currentDate.getFullYear();
+    const month = String(currentDate.getMonth() + 1).padStart(2, "0");
+    const day = String(currentDate.getDate()).padStart(2, "0");
+    const formattedDate = `${year}-${month}-${day}`;
+
+    // Get date from one year ago
+    const oneYearAgo = new Date();
+    oneYearAgo.setFullYear(year - 1);
+    const oneYearAgoYear = oneYearAgo.getFullYear();
+    const oneYearAgoMonth = String(oneYearAgo.getMonth() + 1).padStart(2, "0");
+    const oneYearAgoDay = String(oneYearAgo.getDate()).padStart(2, "0");
+    const formattedOneYearAgo = `${oneYearAgoYear}-${oneYearAgoMonth}-${oneYearAgoDay}`;
+
+    const options = {
+      method: "GET",
+      url: "https://apistocks.p.rapidapi.com/monthly",
+      params: {
+        symbol: ticker,
+        dateStart: formattedOneYearAgo,
+        dateEnd: formattedDate,
+      },
+      headers: {
+        "X-RapidAPI-Key": "85d67684b5mshdc4ff3300a70167p17a1afjsn1fb1de626c20",
+        "X-RapidAPI-Host": "apistocks.p.rapidapi.com",
+      },
+    };
+
+    try {
+      const stockdata = await axios.request(options);
+      const currentPrice =
+        stockdata.data.Results[stockdata.data.Results.length - 1].Close;
+
+      const holdingValue = currentPrice * amount;
+      total_holdings += holdingValue;
+    } catch (error) {
+      console.error(`Error retrieving stock data for ${ticker}:`, error);
+    }
+  }
+
+  const formattedTotalHoldings = total_holdings.toLocaleString("en-US", {
+    style: "currency",
+    currency: "USD",
+  });
+
   response.render("templates/processPortfolio", {
     name: portfolio_data.name,
     holdings: portfolio_data.holdings,
+    formattedTotalHoldings,
   });
 });
 
