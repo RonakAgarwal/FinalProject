@@ -1,0 +1,26 @@
+{
+  "name": "finalproject",
+  "version": "1.0.0",
+  "description": "CMSC 335 Final Project",
+  "main": "server.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "node server.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/RonakAgarwal/FinalProject.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/RonakAgarwal/FinalProject/issues"
+  },
+  "homepage": "https://github.com/RonakAgarwal/FinalProject#readme",
+  "dependencies": {
+    "express": "^4.17.1",
+    "axios": "^0.21.1",
+    "mongodb": "^4.0.0"
+  }
+}
