@@ -27,7 +27,7 @@
       </button>
       <div class="collapse navbar-collapse" id="navbarNav">
         <ul class="navbar-nav">
-          <li class="nav-item ">
+          <li class="nav-item">
             <a class="nav-link" href="/"
               >Home <span class="sr-only">(current)</span></a
             >
@@ -48,26 +48,41 @@
     <div class="container">
       <h1 class="" style="margin-top: 25px">Stock Data</h1>
       <hr />
-      <div class="row">
+
+      <% if (stockResults) { %>
+      <div class="row mt-5" id="stock-results">
         <div class="col-md-12">
-          <form id="stock-form" action="/stockResults" method="post">
-            <div class="form-group">
-              <label for="ticker" name="ticker">Enter Ticker Symbol:</label>
-              <input
-                type="text"
-                class="form-control"
-                id="ticker"
-                name="ticker"
-                placeholder="e.g. AAPL"
-                required
-              />
-            </div>
-            <button type="submit" class="btn btn-primary">
-              Get Stock Data
-            </button>
-          </form>
+          <h2>Results</h2>
+          <table class="table table-striped">
+            <thead>
+              <tr>
+                <th scope="col">Attribute</th>
+                <th scope="col">Value</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <th scope="row">Stock</th>
+                <td id="current-price"><%= stockResults.ticker %></td>
+              </tr>
+              <tr>
+                <th scope="row">Current Price</th>
+                <td id="current-price"><%= stockResults.currentPrice %></td>
+              </tr>
+              <tr>
+                <th scope="row">1Y Price</th>
+                <td id="one-year-price"><%= stockResults.oneYearPrice %></td>
+              </tr>
+              <tr>
+                <th scope="row">% Change</th>
+                <td id="daily-change"><%= stockResults.yearlyChange %></td>
+              </tr>
+            </tbody>
+          </table>
         </div>
       </div>
+      <a href="/stocks" class="btn btn-primary"> Back </a>
+      <% } %>
     </div>
 
     <!-- Bootstrap JS -->

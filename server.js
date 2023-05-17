@@ -28,28 +28,74 @@ async function run() {
 }
 run().catch(console.dir);
 
-async function addApplicationToDatabase(name, email, gpa) {
+async function createPortfolio(name, ticker, amount) {
   try {
     await client.connect();
-    await client.db("myapp").collection("applications").insertOne({
-      name,
-      email,
-      gpa,
-    });
+    const collection = client.db("stocks").collection("portfolios");
+
+    // Find the portfolio with the given name
+    const portfolio = await collection.findOne({ name });
+
+    // If the portfolio already exists, add the ticker and amount to its list
+    if (portfolio) {
+      await collection.updateOne(
+        { name },
+        { $push: { holdings: { ticker, amount: Number(amount) } } }
+      );
+    } else {
+      // Otherwise, create a new portfolio with the given name and holdings
+      await collection.insertOne({
+        name,
+        holdings: [{ ticker, amount: Number(amount) }],
+      });
+    }
   } finally {
     await client.close();
   }
 }
 
-async function findApplicationsByEmail(email) {
+async function addInvestment(name, ticker, amount) {
   try {
     await client.connect();
-    const result = await client
-      .db("myapp")
-      .collection("applications")
-      .find({ email })
-      .toArray();
-    return result.map(({ name, email, gpa }) => ({ name, email, gpa }));
+    const collection = client.db("stocks").collection("portfolios");
+
+    // Find the portfolio with the given name
+    const portfolio = await collection.findOne({ name });
+
+    if (portfolio) {
+      // Check if there is already a holding for the stock
+      const holding = portfolio.holdings.find((h) => h.ticker === ticker);
+      if (holding) {
+        // Add the amount to the existing holding
+        const newAmount = holding.amount + Number(amount);
+        await collection.updateOne(
+          { _id: portfolio._id, "holdings.ticker": ticker },
+          { $set: { "holdings.$.amount": newAmount } }
+        );
+      } else {
+        // Create a new holding for the stock
+        await collection.updateOne(
+          { _id: portfolio._id },
+          { $push: { holdings: { ticker, amount: Number(amount) } } }
+        );
+      }
+    } else {
+      // If the portfolio does not exist, create a new one
+      await createPortfolio(name, ticker, amount);
+    }
+  } finally {
+    await client.close();
+  }
+}
+
+async function getPortfolioByName(name) {
+  try {
+    await client.connect();
+    const collection = client.db("stocks").collection("portfolios");
+
+    // Find the portfolio with the given name
+    const portfolio = await collection.findOne({ name });
+    return portfolio;
   } finally {
     await client.close();
   }
@@ -58,6 +104,7 @@ async function findApplicationsByEmail(email) {
 // EXPRESS CODE
 
 const express = require("express");
+const axios = require("axios");
 const app = express();
 
 app.set("views", "./");
@@ -73,30 +120,100 @@ app.get("/invest", (request, response) => {
   response.render("templates/invest");
 });
 
+app.post("/processInvestment", async (req, res) => {
+  const { name, ticker, amount } = req.body;
+
+  await addInvestment(name, ticker, amount);
+  res.render("templates/processInvestment", { name, ticker, amount });
+
+  // Check if portfolio exists and add investment if it does
+  // const modifiedCount = await addInvestment(name, ticker, amount);
+  // if (modifiedCount !== null) {
+  //  res.render("templates/processInvestment", { name, ticker, amount });
+  // }
+
+  // Create portfolio if it does not exist
+  // const insertedId = await createPortfolio(name, ticker, amount);
+  // res.render("templates/processInvestment", { name, ticker, amount });
+});
+
 app.get("/portfolio", (request, response) => {
   response.render("templates/portfolio");
+});
+
+app.post("/processPortfolio", async (request, response) => {
+  const { acc } = request.body;
+  const portfolio_data = await getPortfolioByName(acc);
+
+  if (!portfolio_data) {
+    const error_message = "Error: Portfolio not found";
+    return response.send(`
+      <script>alert("${error_message}"); window.location.href = "/portfolio";</script>
+    `);
+  }
+
+  response.render("templates/processPortfolio", {
+    name: portfolio_data.name,
+    holdings: portfolio_data.holdings,
+  });
 });
 
 app.get("/stocks", (request, response) => {
   response.render("templates/stocks");
 });
 
+app.post("/stockResults", async (request, response) => {
+  const { ticker } = request.body;
 
-// ------------- OLD CODE -----------
+  // Get current date
+  const currentDate = new Date();
+  const year = currentDate.getFullYear();
+  const month = String(currentDate.getMonth() + 1).padStart(2, "0");
+  const day = "01";
+  const formattedDate = `${year}-${month}-${day}`;
 
-app.post("/processApplication", async (request, response) => {
-  const { name, email, gpa, backgroundInformation } = request.body;
-  await addApplicationToDatabase(name, email, gpa, backgroundInformation);
-  response.render("templates/processApplication", { name, email, gpa, backgroundInformation });
+  // Get date from one year ago
+  const oneYearAgo = new Date();
+  oneYearAgo.setFullYear(year - 1);
+  const oneYearAgoYear = oneYearAgo.getFullYear();
+  const oneYearAgoMonth = String(oneYearAgo.getMonth() + 1).padStart(2, "0");
+  const oneYearAgoDay = "01";
+  const formattedOneYearAgo = `${oneYearAgoYear}-${oneYearAgoMonth}-${oneYearAgoDay}`;
+
+  const options = {
+    method: "GET",
+    url: "https://apistocks.p.rapidapi.com/monthly",
+    params: {
+      symbol: ticker,
+      dateStart: formattedOneYearAgo,
+      dateEnd: formattedDate,
+    },
+    headers: {
+      "X-RapidAPI-Key": "85d67684b5mshdc4ff3300a70167p17a1afjsn1fb1de626c20",
+      "X-RapidAPI-Host": "apistocks.p.rapidapi.com",
+    },
+  };
+
+  try {
+    const stockdata = await axios.request(options);
+    const oneYearPrice = stockdata.data.Results[0].Close;
+    const currentPrice =
+      stockdata.data.Results[stockdata.data.Results.length - 1].Close;
+    const percentDiff = ((currentPrice - oneYearPrice) / oneYearPrice) * 100;
+    const stockResults = {
+      ticker,
+      currentPrice,
+      oneYearPrice,
+      yearlyChange: percentDiff.toFixed(2) + "%",
+    };
+    response.render("templates/stockResults", { stockResults });
+  } catch (error) {
+    const error_message = "Please enter a valid stock";
+    return response.send(`
+      <script>alert("${error_message}"); window.location.href = "/stocks";</script>
+    `);
+  }
 });
-
-app.post("/processReviewApplication", async (request, response) => {
-  const { email } = request.body;
-  const applications = await findApplicationsByEmail(email);
-  response.render("templates/processReviewApplication", { applications });
-});
-
-// ----------- OLD CODE -----------
 
 app.listen(4000, () => {
   console.log("Server started on port 4000");

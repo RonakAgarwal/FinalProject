@@ -27,7 +27,7 @@
       </button>
       <div class="collapse navbar-collapse" id="navbarNav">
         <ul class="navbar-nav">
-          <li class="nav-item ">
+          <li class="nav-item">
             <a class="nav-link" href="/"
               >Home <span class="sr-only">(current)</span></a
             >
@@ -35,10 +35,10 @@
           <li class="nav-item">
             <a class="nav-link" href="/invest">Invest</a>
           </li>
-          <li class="nav-item">
+          <li class="nav-item active">
             <a class="nav-link" href="/portfolio">Portfolios</a>
           </li>
-          <li class="nav-item active">
+          <li class="nav-item">
             <a class="nav-link" href="/stocks">Stocks</a>
           </li>
         </ul>
@@ -46,28 +46,31 @@
     </nav>
 
     <div class="container">
-      <h1 class="" style="margin-top: 25px">Stock Data</h1>
+      <h1 class="" style="margin-top: 25px">Portfolio Information</h1>
       <hr />
-      <div class="row">
+
+      <div class="row mt-5" id="stock-results">
         <div class="col-md-12">
-          <form id="stock-form" action="/stockResults" method="post">
-            <div class="form-group">
-              <label for="ticker" name="ticker">Enter Ticker Symbol:</label>
-              <input
-                type="text"
-                class="form-control"
-                id="ticker"
-                name="ticker"
-                placeholder="e.g. AAPL"
-                required
-              />
-            </div>
-            <button type="submit" class="btn btn-primary">
-              Get Stock Data
-            </button>
-          </form>
+          <h2>Results for <%= name %></h2>
+          <table class="table table-striped">
+            <thead>
+              <tr>
+                <th>Ticker</th>
+                <th>Amount</th>
+              </tr>
+            </thead>
+            <tbody>
+              <% holdings.forEach(function(holding) { %>
+              <tr>
+                <td><%= holding.ticker %></td>
+                <td><%= holding.amount %> Shares</td>
+              </tr>
+              <% }); %>
+            </tbody>
+          </table>
         </div>
       </div>
+      <a href="/portfolio" class="btn btn-primary"> Back </a>
     </div>
 
     <!-- Bootstrap JS -->
